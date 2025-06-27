@@ -1,8 +1,8 @@
-Flask==2.3.3
-Flask-SQLAlchemy==3.0.5
-Flask-Migrate==4.0.5
-Werkzeug==2.3.7
-selenium==4.15.2
-requests==2.31.0
-flask-cors==4.0.0
-schedule==1.2.0
+Flask
+Flask-SQLAlchemy
+Flask-Migrate
+Werkzeug
+selenium
+requests
+flask-cors
+schedule
