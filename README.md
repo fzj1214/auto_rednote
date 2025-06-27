@@ -1,6 +1,6 @@
 # 小红书自动化发布工具
 
-[![CI/CD Pipeline](https://github.com/YOUR_USERNAME/auto_rednote/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/auto_rednote/actions/workflows/ci.yml)
+[![CI/CD Pipeline](https://github.com/fzj1214/auto_rednote/actions/workflows/ci.yml/badge.svg)](https://github.com/fzj1214/auto_rednote/actions/workflows/ci.yml)
 [![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://opensource.org/licenses/ISC)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![Node.js 14+](https://img.shields.io/badge/node.js-14+-green.svg)](https://nodejs.org/)
@@ -90,7 +90,7 @@ auto_rednote/
 
 1. **克隆项目**
 ```bash
-git clone https://github.com/YOUR_USERNAME/auto_rednote.git
+git clone https://github.com/fzj1214/auto_rednote.git
 cd auto_rednote
 ```
 
@@ -276,7 +276,7 @@ npm start
 
 ⭐ 如果这个项目对你有帮助，请给我们一个Star！
 
-📧 联系我们：[your-email@example.com](mailto:your-email@example.com)
+📧 联系我们：[1158470590@qq.com](mailto:1158470590@qq.com)
 
 本项目采用ISC许可证，详见LICENSE文件。
 
