@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>小红书自动化发布工具</title>
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline'; connect-src http://127.0.0.1:8080 http://localhost:8080;">
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        h1, h2, h3 { color: #333; }
+        label { display: inline-block; width: 80px; margin-bottom: 10px; }
+        input[type=text], input[type=password], input[type=number], select, textarea {
+            padding: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            width: calc(100% - 90px);
+        }
+        input[type=file] { margin-bottom: 15px; }
+        button { 
+            background-color: #4CAF50; 
+            color: white; 
+            padding: 10px 15px; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            margin-right: 10px;
+        }
+        button:hover { background-color: #45a049; }
+        #loginStatus, #publishStatus, #profileStatus, #configStatus { margin-top: 10px; font-weight: bold; }
+        .section { border: 1px solid #eee; padding: 15px; margin-bottom: 20px; border-radius: 5px; background-color: #f9f9f9; }
+        .hidden { display: none; }
+        .tab-nav { margin-bottom: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px; }
+        .tab-nav button { background-color: #ddd; color: #333; }
+        .tab-nav button.active { background-color: #4CAF50; color: white; }
+        textarea { width: calc(100% - 90px); height: 100px; }
+        .ai-btn-group { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+        .ai-style-btn, .ai-persona-btn {
+            background: #f3f3f3;
+            color: #333;
+            border: 1px solid #4CAF50;
+            border-radius: 20px;
+            padding: 8px 18px;
+            margin: 2px 0;
+            cursor: pointer;
+            font-size: 15px;
+            transition: background 0.2s, color 0.2s, border 0.2s;
+        }
+        .ai-style-btn.active, .ai-persona-btn.active {
+            background: #4CAF50;
+            color: #fff;
+            border: 1.5px solid #388e3c;
+        }
+        .ai-style-btn:hover, .ai-persona-btn:hover {
+            background: #c8e6c9;
+        }
+    </style>
+</head>
+<body>
+    <h1>小红书自动化发布工具</h1>
+    
+    <!-- 登录/注册区域 -->
+    <div id="authSection" class="section">
+        <h2 id="authTitle">登录</h2>
+        <label for="username">用户名:</label>
+        <input type="text" id="username" name="username" placeholder="请输入用户名"><br>
+        <label for="password">密码:</label>
+        <input type="password" id="password" name="password" placeholder="请输入密码"><br>
+        <button id="loginBtn">登录</button>
+        <button id="showRegisterBtn">注册新用户</button>
+        <button id="registerBtn" class="hidden">确认注册</button>
+        <button id="showLoginBtn" class="hidden">返回登录</button>
+        <div id="authStatus"></div>
+    </div>
+
+    <!-- 主应用区域 (登录后显示) -->
+    <div id="mainAppSection" class="section hidden">
+        <h2>欢迎, <span id="loggedInUsername">用户</span>!</h2>
+        
+        <!-- Tab 导航 -->
+        <div class="tab-nav">
+            <button id="profileTabBtn" class="active">个人资料</button>
+            <button id="publishTabBtn">自动发布</button>
+            <button id="homeTabBtn">主页信息</button> <!-- 新增主页Tab -->
+            <button id="logoutBtn" style="float: right; background-color: #f44336;">退出登录</button>
+        </div>
+
+        <!-- 个人资料区域 -->
+        <div id="profileSection">
+            <h3>个人资料</h3>
+            <p>当前登录账号: <span id="profileUsername"></span></p>
+            <label for="nickname">昵称:</label>
+            <input type="text" id="nickname" name="nickname"><br>
+            <label for="phone">手机号:</label> <!-- 新增手机号 -->
+            <input type="text" id="phone" name="phone"><br>
+            <label for="bio">简介:</label> <!-- 新增简介 -->
+            <textarea id="bio" name="bio" rows="3"></textarea><br>
+            <button id="saveProfileBtn">保存资料</button>
+            <div id="profileStatus"></div>
+        </div>
+
+        <!-- 自动发布配置区域 -->
+        <div id="publishSection" class="hidden">
+            <h3>AI 智能自动发布</h3>
+            <label for="aiTheme">内容主题:</label>
+            <input type="text" id="aiTheme" name="aiTheme" placeholder="例如：下午茶、旅行、美食分享、学习经验..." style="width: 60%;"><br>
+
+            <label>内容风格:</label>
+            <div id="aiStyleList" class="ai-btn-group"></div>
+            <input type="hidden" id="aiStyle" name="aiStyle">
+
+            <label>内容人设:</label>
+            <div id="aiPersonaList" class="ai-btn-group"></div>
+            <input type="hidden" id="aiPersona" name="aiPersona">
+            <input type="text" id="aiCustomPersona" placeholder="输入自定义人设..." class="hidden" style="margin-top:10px;width:60%;"><br>
+
+            <button id="aiGenerateBtn" style="background:#2196F3;">AI一键生成内容</button>
+            <div id="aiGenStatus" style="margin:10px 0;color:#888;"></div>
+
+            <label for="publishTitle">笔记标题:</label>
+            <input type="text" id="publishTitle" name="publishTitle" placeholder="AI生成或手动输入"><br>
+            <label for="publishContent">笔记内容:</label>
+            <textarea id="publishContent" name="publishContent" placeholder="AI生成或手动输入"></textarea><br>
+
+            <label for="publishImages">图片文件:</label>
+            <input type="file" id="publishImages" name="publishImages" multiple accept="image/*"><br>
+            <small>选择要上传的图片文件</small><br><br>
+
+            <label for="publishSchedule">发布时间:</label>
+            <input type="datetime-local" id="publishSchedule" name="publishSchedule"><br>
+
+            <button id="startPublishBtn">立即发布</button>
+            <button id="schedulePublishBtn">定时发布</button>
+            <div id="publishStatus"></div>
+            
+            <!-- 定时发布管理区域 -->
+            <div style="border: 1px solid #ddd; padding: 15px; margin-top: 20px; border-radius: 5px; background-color: #f8f9fa;">
+                <h4>定时发布管理</h4>
+                <button id="refreshScheduledBtn" type="button" style="background-color: #FF9800;">刷新列表</button>
+                <div id="scheduledPostsList" style="margin-top: 15px;"></div>
+            </div>
+        </div>
+
+        <!-- 主页信息区域 (新增) -->
+        <div id="homeSection" class="hidden">
+            <h3>主页信息</h3>
+            <p>这里将展示用户的小红书主页信息概览。</p>
+            <!-- 未来可以加载粉丝数、笔记列表等 -->
+            <div id="homeContent">加载中...</div>
+        </div>
+
+        <hr>
+        <!-- 保留原来的Python数据获取功能，用于测试 -->
+        <button id="fetchDataBtn">从 Python 获取测试数据</button>
+        <div id="pythonResponse"></div>
+    </div>
+
+    <script>
+      // Electron/浏览器兼容写法
+      let ipcRenderer = null;
+      try {
+          ipcRenderer = window.require ? window.require('electron').ipcRenderer : null;
+      } catch (e) {
+          ipcRenderer = null;
+      }
+      let pythonPort = null;
+      let selectedImageFiles = []; // 用于存储选中的图片文件
+
+      ipcRenderer.on('set-python-port', (event, port) => {
+        console.log(`Received Python port via IPC: ${port}`); // 添加日志
+        console.log(`Received Python port: ${port}`);
+        pythonPort = port;
+        // 可以在这里添加检查登录状态的逻辑
+        checkLoginStatus(); 
+      });
+
+      // 获取UI元素
+      const authSection = document.getElementById('authSection');
+      const mainAppSection = document.getElementById('mainAppSection');
+      const authTitle = document.getElementById('authTitle');
+      const usernameInput = document.getElementById('username');
+      const passwordInput = document.getElementById('password');
+      const loginBtn = document.getElementById('loginBtn'); // Note: This ID is reused, ensure correct element is selected later
+      const showRegisterBtn = document.getElementById('showRegisterBtn');
+      const registerBtn = document.getElementById('registerBtn');
+      const showLoginBtn = document.getElementById('showLoginBtn');
+      const authStatusDiv = document.getElementById('authStatus');
+      
+      const loggedInUsernameSpan = document.getElementById('loggedInUsername');
+      const profileUsernameSpan = document.getElementById('profileUsername');
+      const nicknameInput = document.getElementById('nickname');
+      const phoneInput = document.getElementById('phone'); // 获取手机号输入框
+      const bioInput = document.getElementById('bio'); // 获取简介输入框
+      const saveProfileBtn = document.getElementById('saveProfileBtn');
+      const profileStatusDiv = document.getElementById('profileStatus');
+
+      const publishTitleInput = document.getElementById('publishTitle');
+      const publishContentInput = document.getElementById('publishContent');
+      const publishImagesInput = document.getElementById('publishImages');
+      const publishScheduleInput = document.getElementById('publishSchedule');
+      const startPublishBtn = document.getElementById('startPublishBtn');
+      const schedulePublishBtn = document.getElementById('schedulePublishBtn');
+      const publishStatusDiv = document.getElementById('publishStatus');
+      const refreshScheduledBtn = document.getElementById('refreshScheduledBtn');
+      const scheduledPostsList = document.getElementById('scheduledPostsList');
+      
+      const fetchDataBtn = document.getElementById('fetchDataBtn'); // 保留测试按钮
+      const pythonResponseDiv = document.getElementById('pythonResponse'); // 保留测试响应区域
+
+      const profileTabBtn = document.getElementById('profileTabBtn');
+      const publishTabBtn = document.getElementById('publishTabBtn');
+      const homeTabBtn = document.getElementById('homeTabBtn');
+      const logoutBtn = document.getElementById('logoutBtn');
+
+      const profileSection = document.getElementById('profileSection');
+      const publishSection = document.getElementById('publishSection');
+      const homeSection = document.getElementById('homeSection');
+      const homeContentDiv = document.getElementById('homeContent');
+
+      // --- Helper Functions ---
+      function showSection(sectionToShow) {
+          [profileSection, publishSection, homeSection].forEach(section => {
+              section.classList.add('hidden');
+          });
+          if (sectionToShow) {
+              sectionToShow.classList.remove('hidden');
+          }
+          // Update active tab button
+          [profileTabBtn, publishTabBtn, homeTabBtn].forEach(btn => btn.classList.remove('active'));
+          if (sectionToShow === profileSection) profileTabBtn.classList.add('active');
+          else if (sectionToShow === publishSection) publishTabBtn.classList.add('active');
+          else if (sectionToShow === homeSection) homeTabBtn.classList.add('active');
+      }
+
+      function updateLoginUI(isLoggedIn, username = '') {
+          if (isLoggedIn) {
+              authSection.classList.add('hidden');
+              mainAppSection.classList.remove('hidden');
+              loggedInUsernameSpan.textContent = username;
+              profileUsernameSpan.textContent = username;
+              showSection(profileSection); // 默认显示个人资料
+              // Fetch profile data when login is confirmed or section is shown
+              fetchProfileData(); 
+          } else {
+              authSection.classList.remove('hidden');
+              mainAppSection.classList.add('hidden');
+              showLoginForm(); // Reset to login form
+              usernameInput.value = '';
+              passwordInput.value = '';
+              authStatusDiv.textContent = '';
+          }
+      }
+
+      function showLoginForm() {
+          authTitle.textContent = '登录';
+          loginBtn.classList.remove('hidden');
+          showRegisterBtn.classList.remove('hidden');
+          registerBtn.classList.add('hidden');
+          showLoginBtn.classList.add('hidden');
+          authStatusDiv.textContent = ''; // Clear status on switch
+      }
+
+      function showRegisterForm() {
+          authTitle.textContent = '注册新用户';
+          loginBtn.classList.add('hidden');
+          showRegisterBtn.classList.add('hidden');
+          registerBtn.classList.remove('hidden');
+          showLoginBtn.classList.remove('hidden');
+          authStatusDiv.textContent = ''; // Clear status on switch
+      }
+
+      function apiRequest(endpoint, method = 'GET', body = null) {
+          // 统一API前缀，防止file://和localhost问题
+          const url = `http://127.0.0.1:8080${endpoint}`;
+          const options = {
+              method,
+              credentials: 'include'
+          };
+          if (body) {
+              options.headers = { 'Content-Type': 'application/json' };
+              options.body = JSON.stringify(body);
+          }
+          return fetch(url, options)
+              .then(response => response.json())
+              .catch(err => {
+                  console.error('API请求异常:', err);
+                  throw err;
+              });
+      }
+
+      // --- API Interaction Functions ---
+      function fetchProfileData() {
+          apiRequest('/api/profile')
+              .then(data => {
+                  if (data.status === 'success' && data.profile) {
+                      nicknameInput.value = data.profile.nickname || '';
+                      phoneInput.value = data.profile.phone || ''; // Populate phone
+                      bioInput.value = data.profile.bio || ''; // Populate bio
+                      profileStatusDiv.textContent = '资料加载成功';
+                      profileStatusDiv.style.color = 'green';
+                  } else {
+                      profileStatusDiv.textContent = `加载资料失败: ${data.message}`;
+                      profileStatusDiv.style.color = 'red';
+                  }
+              })
+              .catch(error => {
+                  console.error('Error fetching profile:', error);
+                  profileStatusDiv.textContent = `加载资料请求失败: ${error.message}`;
+                  profileStatusDiv.style.color = 'red';
+              });
+      }
+
+      function fetchHomeData() {
+          homeContentDiv.innerHTML = '正在加载主页信息...'; // Show loading state
+          apiRequest('/api/home')
+              .then(data => {
+                  if (data.status === 'success' && data.homeData) {
+                      // Display home data (example)
+                      homeContentDiv.innerHTML = `
+                          <p>粉丝数: ${data.homeData.followers || 'N/A'}</p>
+                          <p>笔记数: ${data.homeData.notesCount || 'N/A'}</p>
+                          <h4>最近笔记:</h4>
+                          <ul>
+                              ${data.homeData.recentNotes && data.homeData.recentNotes.length > 0 
+                                  ? data.homeData.recentNotes.map(note => `<li>${note.title || '无标题'}</li>`).join('') 
+                                  : '<li>暂无笔记</li>'}
+                          </ul>
+                      `;
+                  } else {
+                      homeContentDiv.innerHTML = `<p style="color: red;">加载主页信息失败: ${data.message}</p>`;
+                  }
+              })
+              .catch(error => {
+                  console.error('Error fetching home data:', error);
+                  homeContentDiv.innerHTML = `<p style="color: red;">加载主页信息请求失败: ${error.message}</p>`;
+              });
+      }
+
+      // --- Login/Register Logic ---
+
+      // 切换到注册表单
+      showRegisterBtn.addEventListener('click', showRegisterForm);
+
+      // 切换回登录表单
+      showLoginBtn.addEventListener('click', showLoginForm);
+
+      // 注册按钮点击事件
+      registerBtn.addEventListener('click', () => {
+          const username = usernameInput.value.trim();
+          const password = passwordInput.value.trim();
+
+          if (!username || !password) {
+              authStatusDiv.textContent = '用户名和密码不能为空';
+              authStatusDiv.style.color = 'red';
+              return;
+          }
+          if (!pythonPort) {
+              authStatusDiv.textContent = '后端服务未连接';
+              authStatusDiv.style.color = 'red';
+              return;
+          }
+
+          authStatusDiv.textContent = '正在注册...';
+          console.log('Register button clicked. Sending:', { username, password }); // 添加日志
+          authStatusDiv.style.color = 'orange';
+
+          apiRequest('/api/register', 'POST', { username, password })
+              .then(data => {
+                  if (data.status === 'success') {
+                      authStatusDiv.textContent = '注册成功! 请登录。';
+                      authStatusDiv.style.color = 'green';
+                      showLoginForm(); // 切换回登录界面
+                      usernameInput.value = username; // Pre-fill username
+                      passwordInput.value = ''; // Clear password
+                  } else {
+                      authStatusDiv.textContent = `注册失败: ${data.message}`;
+                      authStatusDiv.style.color = 'red';
+                  }
+              })
+              .catch(error => {
+                  console.error('Error registering:', error);
+                  authStatusDiv.textContent = `注册请求失败: ${error.message}`;
+                  authStatusDiv.style.color = 'red';
+              });
+      });
+
+      // 登录按钮点击事件
+      loginBtn.addEventListener('click', () => {
+          const username = usernameInput.value.trim();
+          const password = passwordInput.value.trim();
+
+          if (!username || !password) {
+              authStatusDiv.textContent = '请输入用户名和密码';
+              authStatusDiv.style.color = 'red';
+              return;
+          }
+
+          authStatusDiv.textContent = '正在登录...';
+          authStatusDiv.style.color = 'orange';
+
+          apiRequest('/api/login', 'POST', { username, password })
+              .then(data => {
+                  if (data.status === 'success') {
+                      authStatusDiv.textContent = '登录成功!';
+                      authStatusDiv.style.color = 'green';
+                      // 登录成功后直接更新UI和拉取资料，不刷新页面
+                      updateLoginUI(true, data.username);
+                      fetchProfileData();
+                  } else {
+                      authStatusDiv.textContent = `登录失败: ${data.message}`;
+                      authStatusDiv.style.color = 'red';
+                  }
+              })
+              .catch(error => {
+                  console.error('Error logging in:', error);
+                  authStatusDiv.textContent = `登录请求失败: ${error.message}`;
+                  authStatusDiv.style.color = 'red';
+              });
+      });
+
+      logoutBtn.addEventListener('click', () => {
+          apiRequest('/api/logout', 'POST')
+              .then(data => {
+                  console.log('Logout API call finished.');
+                  // Always clear session storage and update UI regardless of backend success/failure
+              })
+              .catch(error => {
+                  console.error('Logout request failed:', error);
+                  // Log error but proceed with UI logout anyway
+              })
+              .finally(() => {
+                  // Clear login status from storage
+                  sessionStorage.removeItem('isLoggedIn');
+                  sessionStorage.removeItem('username');
+                  updateLoginUI(false);
+                  console.log('User logged out from UI.');
+                  authStatusDiv.textContent = ''; // Clear any previous auth messages
+              });
+      });
+
+      // --- API Calls ---
+      async function checkLoginStatus() {
+          try {
+              const resp = await apiRequest('/api/check_login');
+              if (resp.status === 'success' && resp.loggedIn) {
+                  const username = resp.username || sessionStorage.getItem('username') || '';
+                  sessionStorage.setItem('isLoggedIn', 'true');
+                  sessionStorage.setItem('username', username);
+                  updateLoginUI(true, username);
+              } else {
+                  sessionStorage.removeItem('isLoggedIn');
+                  sessionStorage.removeItem('username');
+                  updateLoginUI(false);
+              }
+          } catch (e) {
+              sessionStorage.removeItem('isLoggedIn');
+              sessionStorage.removeItem('username');
+              updateLoginUI(false);
+          }
+      }
+
+      // 初始检查登录状态
+      checkLoginStatus();
+
+      // --- Event Listeners ---
+      loginBtn.addEventListener('click', () => {
+          const username = usernameInput.value.trim();
+          const password = passwordInput.value.trim();
+
+          if (!username || !password) {
+              authStatusDiv.textContent = '请输入用户名和密码';
+              authStatusDiv.style.color = 'red';
+              return;
+          }
+
+          authStatusDiv.textContent = '正在登录...';
+          authStatusDiv.style.color = 'orange';
+
+          apiRequest('/api/login', 'POST', { username, password })
+              .then(data => {
+                  if (data.status === 'success') {
+                      authStatusDiv.textContent = '登录成功!';
+                      authStatusDiv.style.color = 'green';
+                      // 登录成功后直接更新UI和拉取资料，不刷新页面
+                      updateLoginUI(true, data.username);
+                      fetchProfileData();
+                  } else {
+                      authStatusDiv.textContent = `登录失败: ${data.message}`;
+                      authStatusDiv.style.color = 'red';
+                  }
+              })
+              .catch(error => {
+                  console.error('Error logging in:', error);
+                  authStatusDiv.textContent = `登录请求失败: ${error.message}`;
+                  authStatusDiv.style.color = 'red';
+              });
+      });
+
+      // 保存资料按钮事件
+      saveProfileBtn.addEventListener('click', () => {
+          const profileData = {
+              nickname: nicknameInput.value.trim(),
+              phone: phoneInput.value.trim(),
+              bio: bioInput.value.trim()
+          };
+
+          profileStatusDiv.textContent = '正在保存...';
+          profileStatusDiv.style.color = 'orange';
+
+          apiRequest('/api/profile', 'POST', profileData)
+              .then(data => {
+                  if (data.status === 'success') {
+                      profileStatusDiv.textContent = '个人资料已保存';
+                      profileStatusDiv.style.color = 'green';
+                  } else {
+                      profileStatusDiv.textContent = `保存失败: ${data.message}`;
+                      profileStatusDiv.style.color = 'red';
+                  }
+              })
+              .catch(error => {
+                  console.error('Error saving profile:', error);
+                  profileStatusDiv.textContent = `保存请求失败: ${error.message}`;
+                  profileStatusDiv.style.color = 'red';
+              });
+      });
+
+      // Tab navigation
+      profileTabBtn.addEventListener('click', () => {
+          showSection(profileSection);
+          fetchProfileData(); // Fetch data when profile tab is clicked
+      });
+      publishTabBtn.addEventListener('click', () => {
+          showSection(publishSection);
+          // 切换到发布Tab时加载定时发布列表
+          loadScheduledPosts();
+      });
+      homeTabBtn.addEventListener('click', () => {
+          showSection(homeSection);
+          fetchHomeData(); // Fetch home data when tab is clicked
+      });
+
+      logoutBtn.addEventListener('click', async () => {
+          if (!pythonPort) return;
+          try {
+              await fetch(`http://127.0.0.1:${pythonPort}/api/logout`, { method: 'POST' });
+              updateLoginUI(false);
+          } catch (error) {
+              console.error('Logout error:', error);
+              // Handle error display if needed
+          }
+      });
+
+      // Handle file selection
+      publishImagesInput.addEventListener('change', (event) => {
+          selectedImageFiles = Array.from(event.target.files);
+          console.log('Selected files:', selectedImageFiles.map(f => f.name));
+      });
+
+      startPublishBtn.addEventListener('click', async () => {
+          console.log('当前 document.cookie:', document.cookie);
+          if (!pythonPort) {
+              publishStatusDiv.textContent = '后端服务未连接';
+              publishStatusDiv.style.color = 'red';
+              return;
+          }
+          if (selectedImageFiles.length === 0) {
+              publishStatusDiv.textContent = '请选择要上传的图片';
+              publishStatusDiv.style.color = 'red';
+              return;
+          }
+
+          const title = publishTitleInput.value.trim();
+          const content = publishContentInput.value.trim();
+          
+          publishStatusDiv.textContent = '正在发布...';
+          publishStatusDiv.style.color = 'orange';
+          startPublishBtn.disabled = true;
+
+          const formData = new FormData();
+          formData.append('title', title);
+          formData.append('content', content);
+          selectedImageFiles.forEach((file, index) => {
+              formData.append('images', file, file.name); // Ensure 'images' matches Flask backend
+          });
+
+          try {
+              const response = await fetch(`http://127.0.0.1:${pythonPort}/api/publish`, {
+                  method: 'POST',
+                  body: formData, // Send as FormData
+                  credentials: 'include' // 关键：带上cookie，解决401
+              });
+              let result;
+              try {
+                  result = await response.json();
+              } catch (jsonErr) {
+                  publishStatusDiv.textContent = '后端接口异常（返回非JSON），请检查服务端日志';
+                  publishStatusDiv.style.color = 'red';
+                  startPublishBtn.disabled = false;
+                  return;
+              }
+              if (response.ok && result.status === 'success') {
+                  publishStatusDiv.textContent = `发布成功: ${result.message}`;
+                  publishStatusDiv.style.color = 'green';
+                  // Clear inputs after success
+                  publishTitleInput.value = '';
+                  publishContentInput.value = '';
+                  publishImagesInput.value = null; // Clear file input
+                  selectedImageFiles = [];
+                  // 自动跳转到小红书创作者中心
+                  window.open('https://creator.xiaohongshu.com/publish/publish', '_blank');
+              } else {
+                  publishStatusDiv.textContent = `发布失败: ${result.message || '未知错误'}`;
+                  publishStatusDiv.style.color = 'red';
+              }
+          } catch (error) {
+              console.error('Publish error:', error);
+              publishStatusDiv.textContent = `发布请求失败: ${error.message}`;
+              publishStatusDiv.style.color = 'red';
+          } finally {
+              startPublishBtn.disabled = false;
+          }
+      });
+
+      // 定时发布功能
+      schedulePublishBtn.addEventListener('click', async () => {
+          const title = publishTitleInput.value.trim();
+          const content = publishContentInput.value.trim();
+          const scheduledTime = publishScheduleInput.value;
+          const files = publishImagesInput.files;
+          
+          if (!title || !content) {
+              publishStatusDiv.textContent = '请填写标题和内容';
+              publishStatusDiv.style.color = 'red';
+              return;
+          }
+          
+          if (!scheduledTime) {
+              publishStatusDiv.textContent = '请选择发布时间';
+              publishStatusDiv.style.color = 'red';
+              return;
+          }
+          
+          if (files.length === 0) {
+              publishStatusDiv.textContent = '请选择至少一张图片';
+              publishStatusDiv.style.color = 'red';
+              return;
+          }
+          
+          // 检查时间是否在未来
+          const selectedTime = new Date(scheduledTime);
+          const now = new Date();
+          if (selectedTime <= now) {
+              publishStatusDiv.textContent = '发布时间必须在未来';
+              publishStatusDiv.style.color = 'red';
+              return;
+          }
+          
+          const formData = new FormData();
+          formData.append('title', title);
+          formData.append('content', content);
+          formData.append('scheduled_time', scheduledTime);
+          
+          for (let i = 0; i < files.length; i++) {
+              formData.append('images', files[i]);
+          }
+          
+          try {
+              publishStatusDiv.textContent = '正在创建定时发布任务...';
+              publishStatusDiv.style.color = 'blue';
+              
+              const response = await fetch(`http://127.0.0.1:${pythonPort}/api/schedule_publish`, {
+                  method: 'POST',
+                  body: formData,
+                  credentials: 'include'
+              });
+              
+              const result = await response.json();
+              
+              if (result.status === 'success') {
+                  publishStatusDiv.textContent = result.message;
+                  publishStatusDiv.style.color = 'green';
+                  
+                  // 清空表单
+                  publishTitleInput.value = '';
+                  publishContentInput.value = '';
+                  publishImagesInput.value = '';
+                  publishScheduleInput.value = '';
+                  
+                  // 刷新定时发布列表
+                  loadScheduledPosts();
+              } else {
+                  publishStatusDiv.textContent = result.message || '定时发布创建失败';
+                  publishStatusDiv.style.color = 'red';
+              }
+          } catch (error) {
+              publishStatusDiv.textContent = `定时发布创建失败: ${error.message}`;
+              publishStatusDiv.style.color = 'red';
+          }
+      });
+
+      // 加载定时发布列表
+      async function loadScheduledPosts() {
+          if (!pythonPort) {
+              scheduledPostsList.innerHTML = '<p style="color: red;">Python backend port not set.</p>';
+              return;
+          }
+          
+          try {
+              const response = await fetch(`http://127.0.0.1:${pythonPort}/api/scheduled_posts`, {
+                  method: 'GET',
+                  credentials: 'include'
+              });
+              
+              const result = await response.json();
+              
+              if (result.status === 'success') {
+                  displayScheduledPosts(result.data);
+              } else {
+                  scheduledPostsList.innerHTML = `<p style="color: red;">${result.message}</p>`;
+              }
+          } catch (error) {
+              scheduledPostsList.innerHTML = `<p style="color: red;">加载定时发布列表失败: ${error.message}</p>`;
+          }
+      }
+      
+      // 显示定时发布列表
+      function displayScheduledPosts(posts) {
+          if (posts.length === 0) {
+              scheduledPostsList.innerHTML = '<p style="color: gray;">暂无定时发布任务</p>';
+              return;
+          }
+          
+          let html = '<table style="width: 100%; border-collapse: collapse; margin-top: 10px;">';
+          html += '<tr style="background-color: #f0f0f0;">';
+          html += '<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">标题</th>';
+          html += '<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">内容预览</th>';
+          html += '<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">发布时间</th>';
+          html += '<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">状态</th>';
+          html += '<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">操作</th>';
+          html += '</tr>';
+          
+          posts.forEach(post => {
+              const statusColor = getStatusColor(post.status);
+              const statusText = getStatusText(post.status);
+              
+              html += '<tr>';
+              html += `<td style="border: 1px solid #ddd; padding: 8px;">${post.title}</td>`;
+              html += `<td style="border: 1px solid #ddd; padding: 8px;">${post.content}</td>`;
+              html += `<td style="border: 1px solid #ddd; padding: 8px;">${post.scheduled_time}</td>`;
+              html += `<td style="border: 1px solid #ddd; padding: 8px; color: ${statusColor};">${statusText}</td>`;
+              html += '<td style="border: 1px solid #ddd; padding: 8px;">';
+              
+              if (post.status === 'pending') {
+                  html += `<button onclick="cancelScheduledPost(${post.id})" style="background-color: #f44336; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">取消</button>`;
+              } else {
+                  html += '<span style="color: gray;">-</span>';
+              }
+              
+              html += '</td>';
+              html += '</tr>';
+          });
+          
+          html += '</table>';
+          scheduledPostsList.innerHTML = html;
+      }
+      
+      // 获取状态颜色
+      function getStatusColor(status) {
+          switch (status) {
+              case 'pending': return '#FF9800';
+              case 'publishing': return '#2196F3';
+              case 'published': return '#4CAF50';
+              case 'failed': return '#f44336';
+              case 'cancelled': return '#9E9E9E';
+              default: return '#000';
+          }
+      }
+      
+      // 获取状态文本
+      function getStatusText(status) {
+          switch (status) {
+              case 'pending': return '待发布';
+              case 'publishing': return '发布中';
+              case 'published': return '已发布';
+              case 'failed': return '发布失败';
+              case 'cancelled': return '已取消';
+              default: return status;
+          }
+      }
+      
+      // 取消定时发布
+      async function cancelScheduledPost(postId) {
+          if (!confirm('确定要取消这个定时发布任务吗？')) {
+              return;
+          }
+          
+          try {
+              const response = await fetch(`http://127.0.0.1:${pythonPort}/api/cancel_scheduled_post/${postId}`, {
+                  method: 'DELETE',
+                  credentials: 'include'
+              });
+              
+              const result = await response.json();
+              
+              if (result.status === 'success') {
+                  alert('定时发布任务已取消');
+                  loadScheduledPosts(); // 刷新列表
+              } else {
+                  alert(result.message || '取消失败');
+              }
+          } catch (error) {
+              alert(`取消失败: ${error.message}`);
+          }
+      }
+      
+      // 刷新定时发布列表按钮
+      refreshScheduledBtn.addEventListener('click', () => {
+          loadScheduledPosts();
+      });
+
+      // 保留测试按钮功能
+      fetchDataBtn.addEventListener('click', async () => {
+          if (!pythonPort) {
+              pythonResponseDiv.textContent = 'Python backend port not set.';
+              return;
+          }
+          try {
+              const response = await fetch(`http://127.0.0.1:${pythonPort}/api/data`);
+              const data = await response.json();
+              pythonResponseDiv.textContent = `Response from Python: ${JSON.stringify(data)}`;
+          } catch (error) {
+              pythonResponseDiv.textContent = `Error fetching data: ${error.message}`;
+          }
+      });
+
+      // --- AI自动发布表单初始化 ---
+      const styleOptions = ["干货分享", "情感故事", "生活记录", "深度思考", "幽默风趣", "文艺清新", "实用指南", "科普知识", "种草测评"];
+      const personaOptions = ["职场人士", "学生党", "妈妈", "新婚主妇", "旅行达人", "美食博主", "健身达人", "资深玩家", "宠物主人", "手工爱好者", "自定义"];
+
+      function renderStyleOptions() {
+          const list = document.getElementById('aiStyleList');
+          list.innerHTML = styleOptions.map(style => `<button type='button' class='ai-style-btn' data-value='${style}'>${style}</button>`).join(' ');
+          document.querySelectorAll('.ai-style-btn').forEach(btn => {
+              btn.onclick = function() {
+                  document.querySelectorAll('.ai-style-btn').forEach(b => b.classList.remove('active'));
+                  btn.classList.add('active');
+                  document.getElementById('aiStyle').value = btn.dataset.value;
+              };
+          });
+          // 默认选中第一个
+          document.querySelector('.ai-style-btn').click();
+      }
+      function renderPersonaOptions() {
+          const list = document.getElementById('aiPersonaList');
+          list.innerHTML = personaOptions.map(p => `<button type='button' class='ai-persona-btn' data-value='${p}'>${p}</button>`).join(' ');
+          document.querySelectorAll('.ai-persona-btn').forEach(btn => {
+              btn.onclick = function() {
+                  document.querySelectorAll('.ai-persona-btn').forEach(b => b.classList.remove('active'));
+                  btn.classList.add('active');
+                  document.getElementById('aiPersona').value = btn.dataset.value === '自定义' ? '' : btn.dataset.value;
+                  document.getElementById('aiCustomPersona').classList.toggle('hidden', btn.dataset.value !== '自定义');
+              };
+          });
+          // 默认选中第一个
+          document.querySelector('.ai-persona-btn').click();
+      }
+      renderStyleOptions();
+      renderPersonaOptions();
+      document.getElementById('aiCustomPersona').addEventListener('input', function() {
+          document.getElementById('aiPersona').value = this.value;
+      });
+
+      // --- AI一键生成内容 ---
+      document.getElementById('aiGenerateBtn').onclick = async function() {
+          const theme = document.getElementById('aiTheme').value.trim();
+          const style = document.getElementById('aiStyle').value.trim();
+          const persona = document.getElementById('aiPersona').value.trim();
+          if (!theme || !style || !persona) {
+              document.getElementById('aiGenStatus').textContent = '请填写主题、风格和人设';
+              document.getElementById('aiGenStatus').style.color = 'red';
+              return;
+          }
+          document.getElementById('aiGenStatus').textContent = 'AI正在生成内容...';
+          document.getElementById('aiGenStatus').style.color = '#888';
+          try {
+              const resp = await fetch('http://127.0.0.1:8080/api/ai_generate', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ theme, style, persona })
+              });
+              const data = await resp.json();
+              if (data.status === 'success' && data.data) {
+                  document.getElementById('aiGenStatus').textContent = 'AI生成成功，可编辑后发布';
+                  document.getElementById('aiGenStatus').style.color = 'green';
+                  document.getElementById('publishTitle').value = data.data.title || '';
+                  document.getElementById('publishContent').value = data.data.content || '';
+              } else {
+                  document.getElementById('aiGenStatus').textContent = 'AI生成失败: ' + (data.message || '未知错误');
+                  document.getElementById('aiGenStatus').style.color = 'red';
+              }
+          } catch (e) {
+              document.getElementById('aiGenStatus').textContent = 'AI生成请求失败: ' + e.message;
+              document.getElementById('aiGenStatus').style.color = 'red';
+          }
+      };
+
+      // --- 轮询后端发布状态，自动刷新 ---
+      setInterval(() => {
+        fetch('http://127.0.0.1:8080/api/publish_status')
+          .then(resp => resp.json())
+          .then(data => {
+            if (data.status === 'success') {
+              publishStatusDiv.textContent = '发布成功，已自动刷新！';
+              publishStatusDiv.style.color = 'green';
+              // 自动刷新页面或重置表单
+              setTimeout(() => window.location.reload(), 1000);
+            } else if (data.status === 'fail') {
+              publishStatusDiv.textContent = '发布失败，请重试！';
+              publishStatusDiv.style.color = 'red';
+            }
+          });
+      }, 2000);
+
+    </script>
+</body>
+</html>

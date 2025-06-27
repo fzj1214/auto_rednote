@@ -1,0 +1,16 @@
+{
+  "name": "auto_rednote",
+  "version": "1.0.0",
+  "description": "小红书自动化发布工具是一个集内容生成、自动登录和发布于一体的跨平台桌面应用，帮助用户轻松创建并发布小红书笔记。本工具使用AI技术生成符合小红书平台风格的内容，并通过自动化技术完成发布流程，大大提高内容创作和发布效率。项目可以调用DeepSeek、可灵ai、Midjourney和魔搭社区的小红书MCP发布器，实现内容的快速生成和发布。",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^31.0.0"
+  }
+}
